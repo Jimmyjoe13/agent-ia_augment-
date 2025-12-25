@@ -1,94 +1,190 @@
-# 🤖 RAG Agent IA Augmenté
+# 🤖 RAG Agent IA
 
-Un système RAG (Retrieval-Augmented Generation) personnalisé utilisant Mistral AI, Supabase et des sources de données externes.
+Système de **Retrieval-Augmented Generation (RAG)** personnalisé avec authentification par clé API.
+
+## ✨ Fonctionnalités
+
+- 🔍 **Recherche hybride** : Vector Store + Recherche web (Perplexity)
+- 🧠 **LLM Mistral AI** : Génération de réponses contextuelles
+- 📦 **Multi-sources** : GitHub, PDF, LinkedIn, texte manuel
+- 🔐 **Authentification API Key** : Sécurisée avec scopes et quotas
+- 📊 **Feedback Loop** : Amélioration continue par ré-injection
+- 📈 **Rate Limiting** : Contrôle des usages par clé
 
 ## 🏗️ Architecture
 
 ```
-agent-ia_augmenté/
-├── src/
-│   ├── config/          # Configuration & environnement
-│   ├── models/          # Modèles Pydantic
-│   ├── providers/       # Ingestion de données
-│   ├── repositories/    # Accès base de données
-│   ├── services/        # Logique métier (RAG Engine)
-│   ├── agents/          # Agent de recherche web
-│   └── api/             # Endpoints FastAPI
-├── scripts/
-│   └── migrations/      # Scripts SQL Supabase
-├── tests/
-│   ├── unit/
-│   └── integration/
-└── requirements.txt
+┌─────────────────────────────────────────────────────────────┐
+│                      API FastAPI                            │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐ │
+│  │ Auth Layer  │  │   Routes    │  │   Admin Routes      │ │
+│  │ (API Keys)  │  │ /api/v1/*   │  │ /api/v1/keys        │ │
+│  └─────────────┘  └─────────────┘  └─────────────────────┘ │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                     RAG Engine                               │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐  │
+│  │ Embedding    │  │ Vector       │  │ Perplexity       │  │
+│  │ Service      │  │ Search       │  │ Agent (Web)      │  │
+│  └──────────────┘  └──────────────┘  └──────────────────┘  │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                     Supabase (pgvector)                      │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐  │
+│  │ documents    │  │ conversations│  │ api_keys         │  │
+│  └──────────────┘  └──────────────┘  └──────────────────┘  │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ## 🚀 Installation
 
-### Prérequis
-
-- Python 3.10+
-- Compte Supabase avec pgvector activé
-- Clés API: Mistral AI, Perplexity (optionnel), GitHub (optionnel)
-
-### Setup
+### 1. Cloner et installer
 
 ```bash
-# Cloner et installer
 cd agent-ia_augmenté
 pip install -r requirements.txt
-
-# Configurer l'environnement
-cp .env.example .env
-# Éditer .env avec vos clés API
-
-# Exécuter les migrations SQL dans Supabase
-# (Copier les scripts de scripts/migrations/ dans l'éditeur SQL Supabase)
 ```
 
-## 📊 Configuration Supabase
+### 2. Configurer l'environnement
 
-1. Créer un projet sur [supabase.com](https://supabase.com)
-2. Activer l'extension pgvector dans SQL Editor:
-   ```sql
-   CREATE EXTENSION IF NOT EXISTS vector;
-   ```
-3. Exécuter les migrations dans l'ordre:
-   - `001_create_documents_table.sql`
-   - `002_create_similarity_function.sql`
-   - `003_create_conversations_table.sql`
+```bash
+cp .env.example .env
+# Éditer .env avec vos clés API
+```
 
-## 🔑 Variables d'Environnement
+### 3. Exécuter les migrations Supabase
 
-| Variable                    | Description            | Requis |
-| --------------------------- | ---------------------- | ------ |
-| `MISTRAL_API_KEY`           | Clé API Mistral AI     | ✅     |
-| `SUPABASE_URL`              | URL du projet Supabase | ✅     |
-| `SUPABASE_SERVICE_ROLE_KEY` | Clé service Supabase   | ✅     |
-| `PERPLEXITY_API_KEY`        | Clé API Perplexity     | ❌     |
-| `GITHUB_ACCESS_TOKEN`       | Token GitHub           | ❌     |
+Dans le **SQL Editor** de Supabase, exécutez dans l'ordre :
 
-## 📚 Composants
+1. `scripts/migrations/001_create_documents_table.sql`
+2. `scripts/migrations/002_create_similarity_function.sql`
+3. `scripts/migrations/003_create_conversations_table.sql`
+4. `scripts/migrations/004_create_api_keys_table.sql`
 
-### Data Providers
+### 4. Générer une Master Key
 
-- **GithubProvider**: Extraction de README et code source
-- **PDFProvider**: Parsing de CVs et documents PDF
+```bash
+python -c "import secrets; print('master_' + secrets.token_hex(32))"
+```
 
-### Services
+Ajoutez cette clé dans `.env` :
 
-- **EmbeddingService**: Génération d'embeddings via Mistral
-- **RAGEngine**: Orchestration du pipeline RAG complet
+```
+API_MASTER_KEY=master_xxxx...
+```
 
-### Agents
+## 🔐 Authentification API
 
-- **PerplexityAgent**: Recherche web en temps réel
+### Créer une clé API
+
+```bash
+curl -X POST http://localhost:8000/api/v1/keys \
+  -H "X-API-Key: master_votre_master_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Mon Application",
+    "scopes": ["query", "feedback"],
+    "rate_limit_per_minute": 100
+  }'
+```
+
+⚠️ **Important** : La clé complète n'est affichée qu'une seule fois !
+
+### Utiliser une clé API
+
+```bash
+# Via header (recommandé)
+curl -X POST http://localhost:8000/api/v1/query \
+  -H "X-API-Key: rag_votre_cle" \
+  -H "Content-Type: application/json" \
+  -d '{"question": "Quelles sont mes compétences?"}'
+
+# Via query param
+curl "http://localhost:8000/api/v1/query?api_key=rag_votre_cle" \
+  -H "Content-Type: application/json" \
+  -d '{"question": "..."}'
+```
+
+### Scopes disponibles
+
+| Scope      | Description               |
+| ---------- | ------------------------- |
+| `query`    | Interroger le système RAG |
+| `ingest`   | Ingérer des documents     |
+| `feedback` | Soumettre des feedbacks   |
+| `admin`    | Accès complet             |
+
+## 📖 Documentation API
+
+Démarrez l'API puis accédez à :
+
+- **Swagger UI** : http://localhost:8000/docs
+- **ReDoc** : http://localhost:8000/redoc
+- **OpenAPI JSON** : http://localhost:8000/openapi.json
+
+## 🎮 Démarrage Rapide
+
+### Lancer l'API
+
+```bash
+python -m uvicorn src.api.main:app --reload
+```
+
+### Lancer l'interface Streamlit
+
+```bash
+streamlit run streamlit_app.py
+```
+
+### Ingérer des données
+
+```bash
+# GitHub
+python scripts/ingest.py --github owner/repo
+
+# PDF
+python scripts/ingest.py --pdf ./cv.pdf
+
+# LinkedIn
+python scripts/ingest.py --linkedin ./linkedin_export.json
+```
+
+## 📁 Structure du Projet
+
+```
+agent-ia_augmenté/
+├── src/
+│   ├── api/              # FastAPI (routes, auth, schemas)
+│   ├── agents/           # Perplexity Agent
+│   ├── config/           # Settings, logging
+│   ├── models/           # Pydantic models
+│   ├── providers/        # GitHub, PDF, LinkedIn
+│   ├── repositories/     # Supabase access
+│   └── services/         # RAG Engine, Embedding, Feedback
+├── scripts/
+│   ├── migrations/       # SQL migrations
+│   ├── ingest.py         # CLI d'ingestion
+│   └── train.py          # Training loop
+├── tests/                # Unit & integration tests
+├── streamlit_app.py      # UI interactive
+├── requirements.txt
+└── .env.example
+```
 
 ## 🧪 Tests
 
 ```bash
-pytest tests/ -v --cov=src
+# Exécuter tous les tests
+python -m pytest tests/ -v
+
+# Avec couverture
+python -m pytest tests/ -v --cov=src
 ```
 
-## 📝 License
+## 📜 License
 
-MIT
+MIT License - Voir [LICENSE](LICENSE)

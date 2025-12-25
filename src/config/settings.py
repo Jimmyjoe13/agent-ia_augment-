@@ -135,6 +135,26 @@ class Settings(BaseSettings):
         description="Auto-reload en développement",
     )
     
+    # ===== API Authentication =====
+    api_key_required: bool = Field(
+        default=True,
+        description="Exiger une clé API pour les endpoints protégés",
+    )
+    api_master_key: str = Field(
+        default="",
+        description="Master key pour créer les premières clés API",
+    )
+    rate_limit_enabled: bool = Field(
+        default=True,
+        description="Activer le rate limiting par clé",
+    )
+    rate_limit_requests: int = Field(
+        default=100,
+        description="Nombre de requêtes par minute (défaut)",
+        ge=0,
+        le=10000,
+    )
+    
     @field_validator("supabase_url")
     @classmethod
     def validate_supabase_url(cls, v: str) -> str:

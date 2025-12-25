@@ -1,0 +1,66 @@
+# ============================================
+# Render Deployment Configuration
+# ============================================
+# Ce fichier configure le déploiement sur Render.com
+# Documentation: https://render.com/docs/blueprint-spec
+
+services:
+  # ===== API FastAPI =====
+  - type: web
+    name: rag-agent-api
+    runtime: python
+    region: frankfurt # ou oregon, singapore, etc.
+
+    # Plan (free, starter, standard, etc.)
+    plan: free
+
+    # Branche Git à déployer
+    branch: main
+
+    # Commande de build
+    buildCommand: pip install -r requirements.txt
+
+    # Commande de démarrage
+    startCommand: uvicorn src.api.main:app --host 0.0.0.0 --port $PORT
+
+    # Variables d'environnement
+    envVars:
+      # Application
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: false
+      - key: LOG_LEVEL
+        value: INFO
+
+      # Python
+      - key: PYTHON_VERSION
+        value: 3.10.11
+
+      # API Settings
+      - key: API_KEY_REQUIRED
+        value: true
+      - key: RATE_LIMIT_ENABLED
+        value: true
+
+      # Secrets (à configurer manuellement dans Render Dashboard)
+      - key: MISTRAL_API_KEY
+        sync: false # Ne pas synchroniser, configurer manuellement
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: PERPLEXITY_API_KEY
+        sync: false
+      - key: GITHUB_ACCESS_TOKEN
+        sync: false
+      - key: API_MASTER_KEY
+        sync: false
+
+    # Health check
+    healthCheckPath: /health
+
+    # Auto-deploy on push
+    autoDeploy: true
