@@ -1,0 +1,13 @@
+# Configuration Netlify pour le frontend
+
+[build]
+  base = "frontend"
+  publish = ".next"
+  command = "npm run build"
+
+[build.environment]
+  NODE_VERSION = "20"
+  NEXT_PUBLIC_API_URL = "https://rag-agent-api.onrender.com/api/v1"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
