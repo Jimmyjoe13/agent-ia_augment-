@@ -218,10 +218,15 @@ def create_app() -> FastAPI:
     # Schéma OpenAPI personnalisé
     app.openapi = lambda: custom_openapi(app)
     
-    # CORS Middleware
+    # CORS Middleware - Configurable origins
+    cors_origins = settings.cors_origins.split(",") if settings.cors_origins else []
+    if settings.is_development:
+        cors_origins.append("http://localhost:3000")
+        cors_origins.append("http://127.0.0.1:3000")
+    
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"] if settings.is_development else [],
+        allow_origins=cors_origins,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

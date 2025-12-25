@@ -1,18 +1,18 @@
 # ============================================
 # Render Deployment Configuration
 # ============================================
-# Ce fichier configure le déploiement sur Render.com
-# Documentation: https://render.com/docs/blueprint-spec
+# Backend API - FastAPI
+# Frontend sera déployé sur Netlify séparément
 
 services:
-  # ===== API FastAPI =====
   - type: web
     name: rag-agent-api
     runtime: python
-    region: frankfurt # ou oregon, singapore, etc.
-
-    # Plan (free, starter, standard, etc.)
+    region: frankfurt
     plan: free
+
+    # Dossier racine du backend
+    rootDir: backend
 
     # Branche Git à déployer
     branch: main
@@ -25,27 +25,26 @@ services:
 
     # Variables d'environnement
     envVars:
-      # Application
       - key: APP_ENV
         value: production
       - key: APP_DEBUG
         value: false
       - key: LOG_LEVEL
         value: INFO
-
-      # Python
       - key: PYTHON_VERSION
         value: 3.10.11
-
-      # API Settings
       - key: API_KEY_REQUIRED
         value: true
       - key: RATE_LIMIT_ENABLED
         value: true
 
-      # Secrets (à configurer manuellement dans Render Dashboard)
+      # CORS pour le frontend Netlify
+      - key: CORS_ORIGINS
+        value: https://rag-agent.netlify.app,http://localhost:3000
+
+      # Secrets (à configurer dans Render Dashboard)
       - key: MISTRAL_API_KEY
-        sync: false # Ne pas synchroniser, configurer manuellement
+        sync: false
       - key: SUPABASE_URL
         sync: false
       - key: SUPABASE_ANON_KEY

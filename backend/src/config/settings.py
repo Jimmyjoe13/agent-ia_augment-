@@ -155,6 +155,12 @@ class Settings(BaseSettings):
         le=10000,
     )
     
+    # ===== CORS Settings =====
+    cors_origins: str = Field(
+        default="http://localhost:3000",
+        description="Origines CORS autorisées (séparées par des virgules)",
+    )
+    
     @field_validator("supabase_url")
     @classmethod
     def validate_supabase_url(cls, v: str) -> str:
