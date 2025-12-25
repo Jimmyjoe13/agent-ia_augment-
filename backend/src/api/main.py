@@ -219,16 +219,25 @@ def create_app() -> FastAPI:
     app.openapi = lambda: custom_openapi(app)
     
     # CORS Middleware - Configurable origins
-    cors_origins = settings.cors_origins.split(",") if settings.cors_origins else []
+    # Note: En production, configurez CORS_ORIGINS avec l'URL du frontend
+    cors_origins_str = settings.cors_origins or ""
+    cors_origins = [o.strip() for o in cors_origins_str.split(",") if o.strip()]
+    
+    # Ajouter les origines de développement
     if settings.is_development:
-        cors_origins.append("http://localhost:3000")
-        cors_origins.append("http://127.0.0.1:3000")
+        cors_origins.extend([
+            "http://localhost:3000",
+            "http://127.0.0.1:3000",
+        ])
+    
+    # Si aucune origine n'est configurée, autoriser toutes les origines (à éviter en prod)
+    allow_all_origins = len(cors_origins) == 0
     
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=cors_origins,
-        allow_credentials=True,
-        allow_methods=["*"],
+        allow_origins=["*"] if allow_all_origins else cors_origins,
+        allow_credentials=not allow_all_origins,  # Pas de credentials avec wildcard
+        allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
         allow_headers=["*"],
         expose_headers=["X-RateLimit-Limit", "X-RateLimit-Remaining", "X-RateLimit-Reset"],
     )
