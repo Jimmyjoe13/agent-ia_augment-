@@ -14,7 +14,7 @@ from jose import jwt
 from src.config.settings import get_settings
 from src.repositories.user_repository import UserRepository
 from src.models.user import UserWithSubscription
-from src.api.auth import api_master_key_header
+from src.api.auth import api_key_header as api_master_key_header
 
 # Repository singleton
 _user_repo: UserRepository | None = None

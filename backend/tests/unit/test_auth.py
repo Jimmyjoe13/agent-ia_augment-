@@ -65,9 +65,8 @@ class TestApiKeyModels:
         """Test du modèle de validation."""
         validation = ApiKeyValidation(
             id=uuid4(),
-            name="Test Key",
             scopes=["query", "feedback"],
-            rate_limit_per_minute=100,
+            rate_limit=100,
             is_valid=True,
         )
         
@@ -79,9 +78,8 @@ class TestApiKeyModels:
         """Test validation rejetée."""
         validation = ApiKeyValidation(
             id=uuid4(),
-            name="Expired Key",
             scopes=["query"],
-            rate_limit_per_minute=100,
+            rate_limit=100,
             is_valid=False,
             rejection_reason="key_expired",
         )
@@ -129,9 +127,8 @@ class TestAuthDependencies:
         
         mock_key = ApiKeyValidation(
             id=uuid4(),
-            name="Valid Key",
             scopes=["query"],
-            rate_limit_per_minute=100,
+            rate_limit=100,
             is_valid=True,
         )
         
@@ -149,9 +146,8 @@ class TestScopeChecking:
         
         mock_key = ApiKeyValidation(
             id=uuid4(),
-            name="Test",
             scopes=["query", "feedback"],
-            rate_limit_per_minute=100,
+            rate_limit=100,
             is_valid=True,
         )
         
@@ -166,9 +162,8 @@ class TestScopeChecking:
         
         mock_key = ApiKeyValidation(
             id=uuid4(),
-            name="Admin Key",
             scopes=["admin"],
-            rate_limit_per_minute=100,
+            rate_limit=100,
             is_valid=True,
         )
         
@@ -184,9 +179,8 @@ class TestScopeChecking:
         
         mock_key = ApiKeyValidation(
             id=uuid4(),
-            name="Query Only",
             scopes=["query"],
-            rate_limit_per_minute=100,
+            rate_limit=100,
             is_valid=True,
         )
         
@@ -205,9 +199,8 @@ class TestScopeChecking:
         
         mock_key = ApiKeyValidation(
             id=uuid4(),
-            name="Ingest Key",
             scopes=["ingest"],
-            rate_limit_per_minute=100,
+            rate_limit=100,
             is_valid=True,
         )
         
@@ -222,9 +215,8 @@ class TestScopeChecking:
         
         mock_key = ApiKeyValidation(
             id=uuid4(),
-            name="Query Only",
             scopes=["query"],
-            rate_limit_per_minute=100,
+            rate_limit=100,
             is_valid=True,
         )
         

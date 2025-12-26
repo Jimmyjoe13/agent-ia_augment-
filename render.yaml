@@ -32,7 +32,7 @@ services:
       - key: LOG_LEVEL
         value: INFO
       - key: PYTHON_VERSION
-        value: 3.10.11
+        value: 3.13.4
       - key: API_KEY_REQUIRED
         value: true
       - key: RATE_LIMIT_ENABLED

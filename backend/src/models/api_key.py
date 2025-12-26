@@ -180,7 +180,7 @@ class ApiKeyValidation(BaseModel):
     user_id: UUID | None = Field(default=None, description="ID de l'utilisateur")
     scopes: list[str] = Field(default_factory=list, description="Permissions accordées")
     rate_limit: int = Field(default=100, description="Limite de requêtes par minute")
-    error_message: str | None = Field(
+    rejection_reason: str | None = Field(
         default=None,
         description="Raison du rejet si invalide",
     )
