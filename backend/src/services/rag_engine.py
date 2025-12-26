@@ -301,6 +301,7 @@ Réponds dans la langue de la question. Tutoie si l'utilisateur tutoie, vouvoie 
                 elapsed_ms,
                 user_id,
                 thought_process=thought_process,
+                routing_decision=routing,
             )
         
         self.logger.info(
@@ -620,9 +621,23 @@ Réponds dans la langue de la question. Tutoie si l'utilisateur tutoie, vouvoie 
         elapsed_ms: int,
         user_id: str | None = None,
         thought_process: str | None = None,
+        routing_decision: Any | None = None,
     ) -> str | None:
-        """Enregistre la conversation."""
+        """Enregistre la conversation avec les données de réflexion et routage."""
         try:
+            # Préparer les données de routage
+            routing_info = None
+            if routing_decision:
+                routing_info = {
+                    "intent": routing_decision.intent.value,
+                    "confidence": routing_decision.confidence,
+                    "use_rag": routing_decision.should_use_rag,
+                    "use_web": routing_decision.should_use_web,
+                    "use_reflection": routing_decision.use_reflection,
+                    "latency_ms": routing_decision.latency_ms,
+                    "reasoning": routing_decision.reasoning,
+                }
+            
             conv = ConversationCreate(
                 session_id=self._session_id,
                 user_query=question,
@@ -640,10 +655,14 @@ Réponds dans la langue de la question. Tutoie si l'utilisateur tutoie, vouvoie 
                     vector_results_count=sum(
                         1 for s in sources if s.source_type == "vector_store"
                     ),
-                    # Nouveau champ pour le mode réflexion
+                    # Données de réflexion
                     reflection_data={
                         "thought_process": thought_process,
                     } if thought_process else None,
+                    reflection_enabled=thought_process is not None,
+                    # Données de routage
+                    routing_info=routing_info,
+                    llm_provider=self.config.llm_provider if self.config.llm_provider else "mistral",
                 ),
             )
             

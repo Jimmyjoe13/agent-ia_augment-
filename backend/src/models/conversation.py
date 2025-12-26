@@ -69,6 +69,9 @@ class ConversationMetadata(BaseModel):
         tokens_output: Nombre de tokens en sortie.
         response_time_ms: Temps de réponse en millisecondes.
         perplexity_used: Si Perplexity a été utilisé.
+        reflection_data: Données du mode réflexion (si activé).
+        routing_info: Informations de routage intelligent.
+        llm_provider: Provider LLM utilisé.
     """
     
     model_used: str = Field(default="", description="Modèle LLM utilisé")
@@ -77,6 +80,24 @@ class ConversationMetadata(BaseModel):
     response_time_ms: int = Field(default=0, ge=0, description="Temps de réponse (ms)")
     perplexity_used: bool = Field(default=False, description="Perplexity utilisé")
     vector_results_count: int = Field(default=0, ge=0, description="Nombre de résultats vectoriels")
+    
+    # Nouveaux champs pour le mode réflexion et le routage
+    reflection_data: dict[str, Any] | None = Field(
+        default=None,
+        description="Données du mode réflexion (thought_process, etc.)",
+    )
+    routing_info: dict[str, Any] | None = Field(
+        default=None,
+        description="Informations de routage intelligent (intent, confidence, etc.)",
+    )
+    llm_provider: str = Field(
+        default="mistral",
+        description="Provider LLM utilisé (mistral, openai, gemini)",
+    )
+    reflection_enabled: bool = Field(
+        default=False,
+        description="Mode réflexion activé pour cette conversation",
+    )
 
 
 class ConversationCreate(BaseModel):

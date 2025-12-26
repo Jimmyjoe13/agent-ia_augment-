@@ -61,6 +61,23 @@ class ConversationRepository(BaseRepository[Conversation]):
         Returns:
             Conversation créée.
         """
+        # Extraire les données de réflexion et routage depuis metadata
+        metadata_dict = conv.metadata.model_dump(mode="json")
+        thought_process = None
+        routing_info = None
+        reflection_enabled = False
+        llm_provider = "mistral"
+        
+        if conv.metadata.reflection_data:
+            thought_process = conv.metadata.reflection_data.get("thought_process")
+            reflection_enabled = True
+        
+        if conv.metadata.routing_info:
+            routing_info = conv.metadata.routing_info
+        
+        if conv.metadata.llm_provider:
+            llm_provider = conv.metadata.llm_provider
+        
         data = {
             "session_id": conv.session_id,
             "user_query": conv.user_query,
@@ -68,7 +85,12 @@ class ConversationRepository(BaseRepository[Conversation]):
             "user_id": str(conv.user_id) if conv.user_id else None,
             # mode='json' convertit automatiquement les UUIDs en strings
             "context_sources": [s.model_dump(mode="json") for s in conv.context_sources],
-            "metadata": conv.metadata.model_dump(mode="json"),
+            "metadata": metadata_dict,
+            # Nouveaux champs pour réflexion et routage
+            "thought_process": thought_process,
+            "routing_info": routing_info,
+            "reflection_enabled": reflection_enabled,
+            "llm_provider": llm_provider,
         }
         return self.create(data)
     
