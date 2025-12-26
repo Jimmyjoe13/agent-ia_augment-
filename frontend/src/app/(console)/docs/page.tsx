@@ -19,6 +19,7 @@ import {
   Code
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { 
   Tabs, 
   TabsContent, 
@@ -26,6 +27,8 @@ import {
   TabsTrigger 
 } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 export default function DocsPage() {
   return (
@@ -277,4 +280,3 @@ function ParamInfo({ name, type, required = false, desc }: { name: string, type:
     );
 }
 
-import { toast } from "sonner";
