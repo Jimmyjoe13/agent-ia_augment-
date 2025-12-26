@@ -120,10 +120,26 @@ export function useChat(options?: UseChatOptions) {
         return;
       }
 
+      // Déterminer le message d'erreur selon le type
+      let errorText = error.message;
+      let toastTitle = "Erreur de communication";
+      
+      if (error.message.includes("timeout") || error.message.includes("ECONNABORTED")) {
+        errorText = "Le serveur met trop de temps à répondre. Essayez de désactiver la recherche web ou réessayez.";
+        toastTitle = "Délai dépassé";
+      } else if (error.message.includes("401")) {
+        errorText = "Clé API invalide ou manquante. Configurez-la dans Paramètres.";
+        toastTitle = "Non autorisé";
+      } else if (error.message.includes("403")) {
+        errorText = "Permissions insuffisantes pour cette action.";
+        toastTitle = "Accès refusé";
+      } else if (error.message.includes("Network Error") || error.message.includes("ERR_NETWORK")) {
+        errorText = "Impossible de contacter le serveur. Vérifiez votre connexion.";
+        toastTitle = "Erreur réseau";
+      }
+
       // Supprimer le message "loading" et ajouter un message d'erreur
-      const errorMessage = createAssistantMessage(
-        `❌ Erreur: ${error.message}. Vérifiez votre clé API ou votre connexion.`
-      );
+      const errorMessage = createAssistantMessage(`❌ ${errorText}`);
 
       setState((prev) => ({
         ...prev,
@@ -131,8 +147,8 @@ export function useChat(options?: UseChatOptions) {
         isLoading: false,
       }));
 
-      toast.error("Erreur de communication", {
-        description: error.message,
+      toast.error(toastTitle, {
+        description: errorText,
       });
 
       options?.onError?.(error);

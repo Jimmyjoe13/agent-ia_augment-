@@ -35,7 +35,7 @@ class ApiClient {
       headers: {
         "Content-Type": "application/json",
       },
-      timeout: 30000, // 30 secondes
+      timeout: 120000, // 2 minutes pour les requêtes complexes (web search + LLM)
     });
 
     // Interceptor pour ajouter la clé API et vérifier le rate limiting
