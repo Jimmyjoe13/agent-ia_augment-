@@ -11,7 +11,7 @@ export const apiKeySchema = z.object({
   key: z
     .string()
     .min(1, "La clé API est requise")
-    .regex(/^rag_[a-zA-Z0-9]+$/, "Format de clé invalide (doit commencer par 'rag_')"),
+    .regex(/^(rag_|sk-proj-)[a-zA-Z0-9_-]+$/, "Format de clé invalide (doit commencer par 'rag_' ou 'sk-proj-')"),
 });
 
 export const apiKeyCreateSchema = z.object({

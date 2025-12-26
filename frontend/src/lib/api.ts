@@ -39,6 +39,9 @@ class ApiClient {
       timeout: 120000, 
     });
 
+    // Initialiser la clé depuis le stockage local si disponible
+    this.apiKey = this.getStoredApiKey();
+
     // Interceptor pour ajouter l'auth
     this.client.interceptors.request.use((config) => {
       // 1. Rate Limiting Check
@@ -88,12 +91,31 @@ class ApiClient {
 
   // ===== Auth State Management =====
 
+  getStoredApiKey(): string | null {
+    if (typeof window === "undefined") return null;
+    return localStorage.getItem("rag_api_key");
+  }
+
   setApiKey(key: string) {
     this.apiKey = key;
+    if (typeof window !== "undefined") {
+      localStorage.setItem("rag_api_key", key);
+    }
+  }
+
+  clearApiKey() {
+    this.apiKey = null;
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("rag_api_key");
+    }
   }
 
   setAccessToken(token: string) {
     this.accessToken = token;
+  }
+
+  hasApiKey(): boolean {
+    return !!this.apiKey;
   }
 
   // ===== Console Endpoints (User) =====
@@ -120,6 +142,19 @@ class ApiClient {
 
   async revokeUserApiKey(keyId: string): Promise<void> {
     await this.client.delete(`/console/keys/${keyId}`);
+  }
+
+  // Support anciens noms (backward compatibility)
+  async listApiKeys(masterKey?: string): Promise<{ keys: ApiKeyInfo[]; total: number }> {
+    return this.getUserApiKeys();
+  }
+
+  async createApiKey(request: ApiKeyCreate, masterKey?: string): Promise<ApiKeyResponse> {
+    return this.createUserApiKey(request);
+  }
+
+  async revokeApiKey(keyId: string, masterKey?: string): Promise<void> {
+    return this.revokeUserApiKey(keyId);
   }
 
   async getUserUsage(): Promise<any> {
