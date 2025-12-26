@@ -25,6 +25,7 @@ pydantic>=2.9.0
 pydantic[email]>=2.9.0
 pydantic-settings>=2.6.0
 python-multipart>=0.0.9
+python-jose[cryptography]>=3.3.0
 
 # ===== UI Testing =====
 streamlit>=1.40.0
