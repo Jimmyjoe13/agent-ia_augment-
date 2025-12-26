@@ -63,6 +63,24 @@ class Settings(BaseSettings):
         description="Token d'accès GitHub (optionnel)",
     )
     
+    # ===== Alternative LLM Providers =====
+    openai_api_key: str = Field(
+        default="",
+        description="Clé API OpenAI (optionnelle, pour GPT-4)",
+    )
+    gemini_api_key: str = Field(
+        default="",
+        description="Clé API Google Gemini (optionnelle)",
+    )
+    deepseek_api_key: str = Field(
+        default="",
+        description="Clé API DeepSeek (optionnelle)",
+    )
+    default_llm_provider: str = Field(
+        default="mistral",
+        description="Provider LLM par défaut (mistral, openai, gemini)",
+    )
+    
     # ===== OAuth Settings =====
     google_client_id: str = Field(
         default="",

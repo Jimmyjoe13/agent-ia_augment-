@@ -6,7 +6,21 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Send, Globe, Loader2, ThumbsUp, ThumbsDown, Bot, User, StopCircle, RefreshCw, ChevronDown } from "lucide-react";
+import { 
+  Send, 
+  Globe, 
+  Loader2, 
+  ThumbsUp, 
+  ThumbsDown, 
+  Bot, 
+  User, 
+  StopCircle, 
+  RefreshCw, 
+  ChevronDown,
+  Brain,
+  FileSearch,
+  Sparkles
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -20,6 +34,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useChat } from "@/hooks/useChat";
 import { usePreferencesStore } from "@/stores";
+import { ThoughtProcess, RoutingBadge } from "@/components/chat/ProcessingSteps";
 import type { Message, Source } from "@/types/api";
 
 // Composant pour afficher les sources
@@ -157,6 +172,14 @@ export default function ChatPage() {
   // Préférences depuis le store Zustand
   const useWebSearch = usePreferencesStore((state) => state.useWebSearch);
   const setUseWebSearch = usePreferencesStore((state) => state.setUseWebSearch);
+  const forceRag = usePreferencesStore((state) => state.forceRag);
+  const setForceRag = usePreferencesStore((state) => state.setForceRag);
+  const enableReflection = usePreferencesStore((state) => state.enableReflection);
+  const setEnableReflection = usePreferencesStore((state) => state.setEnableReflection);
+  const showRoutingInfo = usePreferencesStore((state) => state.showRoutingInfo);
+  
+  // État local pour afficher les pensées
+  const [expandedThoughts, setExpandedThoughts] = useState<Set<string>>(new Set());
 
   const { 
     messages, 
@@ -190,9 +213,25 @@ export default function ChatPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (input.trim() && !isLoading) {
-      sendMessage(input, useWebSearch);
+      sendMessage(input, {
+        useWebSearch,
+        forceRag,
+        enableReflection,
+      });
       setInput("");
     }
+  };
+  
+  const toggleThought = (messageId: string) => {
+    setExpandedThoughts(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(messageId)) {
+        newSet.delete(messageId);
+      } else {
+        newSet.add(messageId);
+      }
+      return newSet;
+    });
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -302,18 +341,74 @@ export default function ChatPage() {
             </Button>
           </div>
 
-          {/* Options */}
+          {/* Options principales */}
           <div className="flex flex-wrap items-center gap-4">
-            <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-400">
+            {/* Recherche Web */}
+            <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-400 transition-colors hover:text-zinc-300">
               <input
                 type="checkbox"
                 checked={useWebSearch}
                 onChange={(e) => setUseWebSearch(e.target.checked)}
-                className="h-4 w-4 rounded border-zinc-700 bg-zinc-800 text-indigo-600"
+                className="h-4 w-4 rounded border-zinc-700 bg-zinc-800 text-indigo-600 focus:ring-indigo-500"
               />
               <Globe className="h-4 w-4" />
               Recherche web
             </label>
+            
+            {/* Forcer Documents */}
+            <TooltipProvider delayDuration={300}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-400 transition-colors hover:text-zinc-300">
+                    <input
+                      type="checkbox"
+                      checked={forceRag}
+                      onChange={(e) => setForceRag(e.target.checked)}
+                      className="h-4 w-4 rounded border-zinc-700 bg-zinc-800 text-indigo-600 focus:ring-indigo-500"
+                    />
+                    <FileSearch className="h-4 w-4" />
+                    Mes documents
+                  </label>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  Force la recherche dans vos documents personnels
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+
+            {/* Mode Réflexion */}
+            <TooltipProvider delayDuration={300}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <label className={cn(
+                    "flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1 text-sm transition-all",
+                    enableReflection 
+                      ? "bg-violet-500/20 text-violet-400" 
+                      : "text-zinc-400 hover:text-zinc-300"
+                  )}>
+                    <input
+                      type="checkbox"
+                      checked={enableReflection}
+                      onChange={(e) => setEnableReflection(e.target.checked)}
+                      className="sr-only"
+                    />
+                    <Brain className="h-4 w-4" />
+                    <span className="font-medium">Réflexion</span>
+                    {enableReflection && <Sparkles className="h-3 w-3" />}
+                  </label>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-xs">
+                  <p className="font-medium">Mode Réflexion Approfondie</p>
+                  <p className="text-xs text-zinc-400">
+                    L'agent réfléchit étape par étape avant de répondre (Chain of Thought). 
+                    Meilleur pour les questions complexes.
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+
+            {/* Séparateur */}
+            <div className="h-4 w-px bg-zinc-700" />
 
             {/* Bouton Annuler si chargement */}
             {isLoading && (

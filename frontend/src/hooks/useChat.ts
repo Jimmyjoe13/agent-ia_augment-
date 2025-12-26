@@ -31,6 +31,8 @@ const createAssistantMessage = (
     sources?: Source[];
     conversationId?: string;
     isLoading?: boolean;
+    thoughtProcess?: string;
+    routingInfo?: QueryResponse['routing'];
   }
 ): Message => ({
   id: generateId(),
@@ -40,9 +42,17 @@ const createAssistantMessage = (
   sources: options?.sources,
   conversationId: options?.conversationId,
   isLoading: options?.isLoading,
+  thoughtProcess: options?.thoughtProcess,
+  routingInfo: options?.routingInfo,
 });
 
 // ===== Types =====
+
+interface SendMessageOptions {
+  useWebSearch?: boolean;
+  forceRag?: boolean;
+  enableReflection?: boolean;
+}
 
 interface UseChatOptions {
   onError?: (error: Error) => void;
@@ -73,17 +83,19 @@ export function useChat(options?: UseChatOptions) {
   const sendMutation = useMutation({
     mutationFn: async ({
       question,
-      useWeb,
+      options,
       signal,
     }: {
       question: string;
-      useWeb: boolean;
+      options: SendMessageOptions;
       signal?: AbortSignal;
     }) => {
       return api.query({
         question,
         session_id: state.sessionId || undefined,
-        use_web_search: useWeb,
+        use_web_search: options.useWebSearch,
+        use_rag: options.forceRag,
+        enable_reflection: options.enableReflection,
       });
     },
     onSuccess: (data: QueryResponse) => {
@@ -96,6 +108,8 @@ export function useChat(options?: UseChatOptions) {
       const assistantMessage = createAssistantMessage(data.answer, {
         sources: data.sources,
         conversationId: data.conversation_id,
+        thoughtProcess: data.thought_process,
+        routingInfo: data.routing,
       });
 
       setState((prev) => ({
@@ -157,9 +171,14 @@ export function useChat(options?: UseChatOptions) {
 
   // Envoyer un message
   const sendMessage = useCallback(
-    async (content: string, useWeb = true) => {
+    async (content: string, messageOptions?: SendMessageOptions | boolean) => {
       const trimmedContent = content.trim();
       if (!trimmedContent || state.isLoading) return;
+
+      // Compatibilité avec l'ancienne signature (useWeb: boolean)
+      const opts: SendMessageOptions = typeof messageOptions === 'boolean' 
+        ? { useWebSearch: messageOptions }
+        : messageOptions || { useWebSearch: true };
 
       // Annuler toute requête précédente
       if (abortControllerRef.current) {
@@ -183,7 +202,7 @@ export function useChat(options?: UseChatOptions) {
       // Envoyer la requête
       sendMutation.mutate({
         question: trimmedContent,
-        useWeb,
+        options: opts,
         signal: abortControllerRef.current?.signal,
       });
     },

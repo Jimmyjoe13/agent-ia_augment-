@@ -15,13 +15,21 @@ interface UserPreferences {
   // Chat
   useWebSearch: boolean;
   showSources: boolean;
+  forceRag: boolean;
+  enableReflection: boolean;
+  useStreaming: boolean;
   
   // Display
   compactMode: boolean;
+  showRoutingInfo: boolean;
   
   // Notifications
   soundEnabled: boolean;
   notificationsEnabled: boolean;
+  
+  // Provider settings
+  preferredProvider: string | null;
+  preferredModel: string | null;
 }
 
 interface PreferencesActions {
@@ -32,13 +40,21 @@ interface PreferencesActions {
   // Chat
   setUseWebSearch: (enabled: boolean) => void;
   setShowSources: (show: boolean) => void;
+  setForceRag: (enabled: boolean) => void;
+  setEnableReflection: (enabled: boolean) => void;
+  setUseStreaming: (enabled: boolean) => void;
   
   // Display
   setCompactMode: (enabled: boolean) => void;
+  setShowRoutingInfo: (show: boolean) => void;
   
   // Notifications
   setSoundEnabled: (enabled: boolean) => void;
   setNotificationsEnabled: (enabled: boolean) => void;
+  
+  // Provider
+  setPreferredProvider: (provider: string | null) => void;
+  setPreferredModel: (model: string | null) => void;
   
   // Reset
   resetPreferences: () => void;
@@ -52,9 +68,15 @@ const defaultPreferences: UserPreferences = {
   sidebarCollapsed: false,
   useWebSearch: true,
   showSources: true,
+  forceRag: false,
+  enableReflection: false,
+  useStreaming: false,
   compactMode: false,
+  showRoutingInfo: false,
   soundEnabled: true,
   notificationsEnabled: true,
+  preferredProvider: null,
+  preferredModel: null,
 };
 
 // ===== Store =====
@@ -76,16 +98,30 @@ export const usePreferencesStore = create<PreferencesStore>()(
         set({ useWebSearch: enabled }),
       setShowSources: (show) =>
         set({ showSources: show }),
+      setForceRag: (enabled) =>
+        set({ forceRag: enabled }),
+      setEnableReflection: (enabled) =>
+        set({ enableReflection: enabled }),
+      setUseStreaming: (enabled) =>
+        set({ useStreaming: enabled }),
 
       // Display actions
       setCompactMode: (enabled) =>
         set({ compactMode: enabled }),
+      setShowRoutingInfo: (show) =>
+        set({ showRoutingInfo: show }),
 
       // Notification actions
       setSoundEnabled: (enabled) =>
         set({ soundEnabled: enabled }),
       setNotificationsEnabled: (enabled) =>
         set({ notificationsEnabled: enabled }),
+      
+      // Provider actions
+      setPreferredProvider: (provider) =>
+        set({ preferredProvider: provider }),
+      setPreferredModel: (model) =>
+        set({ preferredModel: model }),
 
       // Reset
       resetPreferences: () =>
@@ -99,9 +135,15 @@ export const usePreferencesStore = create<PreferencesStore>()(
         sidebarCollapsed: state.sidebarCollapsed,
         useWebSearch: state.useWebSearch,
         showSources: state.showSources,
+        forceRag: state.forceRag,
+        enableReflection: state.enableReflection,
+        useStreaming: state.useStreaming,
         compactMode: state.compactMode,
+        showRoutingInfo: state.showRoutingInfo,
         soundEnabled: state.soundEnabled,
         notificationsEnabled: state.notificationsEnabled,
+        preferredProvider: state.preferredProvider,
+        preferredModel: state.preferredModel,
       }),
     }
   )

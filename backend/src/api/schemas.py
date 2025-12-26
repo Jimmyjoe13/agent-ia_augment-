@@ -30,6 +30,10 @@ class QueryRequest(BaseModel):
         default=None,
         description="Forcer/désactiver la recherche web",
     )
+    use_rag: bool | None = Field(
+        default=None,
+        description="Forcer l'utilisation du RAG (documents personnels)",
+    )
     session_id: str | None = Field(
         default=None,
         description="ID de session existante",
@@ -45,6 +49,23 @@ class QueryRequest(BaseModel):
         description="Nombre maximum de tokens à générer",
         ge=1,
         le=8192,
+    )
+    # Nouveaux champs pour les fonctionnalités avancées
+    enable_reflection: bool = Field(
+        default=False,
+        description="Activer le mode réflexion approfondie (Chain of Thought)",
+    )
+    stream: bool = Field(
+        default=False,
+        description="Activer le streaming SSE",
+    )
+    provider: str | None = Field(
+        default=None,
+        description="Provider LLM à utiliser (mistral, openai, gemini)",
+    )
+    model: str | None = Field(
+        default=None,
+        description="Modèle spécifique à utiliser",
     )
 
 
@@ -65,6 +86,15 @@ class QueryResponse(BaseModel):
     conversation_id: str | None
     session_id: str
     metadata: dict[str, Any]
+    # Nouveaux champs
+    thought_process: str | None = Field(
+        default=None,
+        description="Processus de réflexion (si mode réflexion activé)",
+    )
+    routing: dict[str, Any] | None = Field(
+        default=None,
+        description="Informations de routage intelligent",
+    )
 
 
 # ===== Feedback Schemas =====

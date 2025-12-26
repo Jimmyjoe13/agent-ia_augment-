@@ -81,10 +81,17 @@ def get_vectorization() -> VectorizationService:
     description="""
 Interroge le système RAG avec une question.
 
-Le système effectue :
-1. Une recherche dans le Vector Store (documents personnels)
-2. Une recherche web via Perplexity (si activée)
-3. Une génération de réponse contextuelle via Mistral
+Le système utilise un **routage intelligent** pour optimiser la latence :
+1. Analyse l'intention pour déterminer le meilleur chemin
+2. Recherche conditionnelle dans le Vector Store
+3. Recherche web conditionnelle via Perplexity
+4. Génération de réponse contextuelle (multi-provider)
+
+**Options avancées** :
+- `enable_reflection`: Active le mode réflexion approfondie (Chain of Thought)
+- `use_rag`: Force la recherche dans les documents personnels
+- `use_web_search`: Force la recherche web
+- `provider`: Sélectionne le provider LLM (mistral, openai, gemini)
 
 **Scope requis**: `query`
     """,
@@ -99,10 +106,12 @@ async def query_rag(
     api_key: ApiKeyValidation = Depends(require_scope("query")),
 ) -> QueryResponse:
     """
-    Interroge le système RAG.
+    Interroge le système RAG avec routage intelligent.
     
-    Effectue une recherche dans le Vector Store et optionnellement sur le web,
-    puis génère une réponse contextuelle.
+    Le routeur analyse automatiquement la requête pour déterminer :
+    - S'il faut chercher dans les documents personnels (RAG)
+    - S'il faut chercher sur le web (actualités)
+    - Si une réflexion approfondie est nécessaire
     """
     try:
         rag = get_rag_engine()
@@ -115,6 +124,8 @@ async def query_rag(
             question=request.question,
             system_prompt=request.system_prompt,
             use_web=request.use_web_search,
+            use_rag=request.use_rag,
+            enable_reflection=request.enable_reflection,
             user_id=str(api_key.user_id) if api_key.user_id else None,
         )
         
@@ -129,10 +140,23 @@ async def query_rag(
             for s in response.sources
         ]
         
+        # Préparer les infos de routage
+        routing_info = None
+        if response.routing:
+            routing_info = {
+                "intent": response.routing.intent.value,
+                "use_rag": response.routing.should_use_rag,
+                "use_web": response.routing.should_use_web,
+                "confidence": response.routing.confidence,
+                "reasoning": response.routing.reasoning,
+                "latency_ms": response.routing.latency_ms,
+            }
+        
         logger.info(
             "Query processed",
             key_id=str(api_key.id),
             question_length=len(request.question),
+            routing_intent=response.routing.intent.value if response.routing else "unknown",
         )
         
         return QueryResponse(
@@ -141,6 +165,8 @@ async def query_rag(
             conversation_id=response.conversation_id,
             session_id=rag.session_id,
             metadata=response.metadata,
+            thought_process=response.thought_process,
+            routing=routing_info,
         )
         
     except Exception as e:
@@ -161,6 +187,74 @@ async def new_session(
     rag = get_rag_engine()
     session_id = rag.new_session()
     return {"session_id": session_id}
+
+
+@router.post(
+    "/query/stream",
+    tags=["RAG"],
+    summary="Interroger le système RAG en streaming",
+    description="""
+Interroge le système RAG avec streaming SSE (Server-Sent Events).
+
+Retourne un flux d'événements permettant un feedback temps réel :
+- `routing`: Décision de routage (intent, use_rag, use_web)
+- `search_start`: Début d'une recherche (type: rag ou web)
+- `search_complete`: Fin d'une recherche avec résultats
+- `generation_start`: Début de la génération
+- `chunk`: Morceau de réponse (contenu progressif)
+- `thought`: Pensée interne (si mode réflexion activé)
+- `complete`: Réponse terminée avec sources et métadonnées
+
+**Scope requis**: `query`
+    """,
+)
+async def query_rag_stream(
+    request: QueryRequest,
+    api_key: ApiKeyValidation = Depends(require_scope("query")),
+):
+    """
+    Interroge le système RAG avec streaming SSE.
+    
+    Émet des événements pour chaque étape du traitement,
+    permettant un feedback visuel temps réel dans l'UI.
+    """
+    from fastapi.responses import StreamingResponse
+    import json
+    
+    async def generate_events():
+        try:
+            rag = get_rag_engine()
+            
+            if request.session_id:
+                rag._session_id = request.session_id
+            
+            async for event in rag.query_stream(
+                question=request.question,
+                system_prompt=request.system_prompt,
+                use_web=request.use_web_search,
+                use_rag=request.use_rag,
+                enable_reflection=request.enable_reflection,
+                user_id=str(api_key.user_id) if api_key.user_id else None,
+            ):
+                # Format SSE
+                event_type = event.get("event", "message")
+                data = json.dumps(event.get("data", {}))
+                yield f"event: {event_type}\ndata: {data}\n\n"
+                
+        except Exception as e:
+            logger.error("Streaming query failed", error=str(e))
+            error_data = json.dumps({"error": str(e)})
+            yield f"event: error\ndata: {error_data}\n\n"
+    
+    return StreamingResponse(
+        generate_events(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 # ===== Feedback Endpoints =====

@@ -9,6 +9,11 @@ export interface QueryRequest {
   session_id?: string;
   system_prompt?: string;
   use_web_search?: boolean;
+  use_rag?: boolean;
+  enable_reflection?: boolean;
+  stream?: boolean;
+  provider?: string;
+  model?: string;
 }
 
 export interface Source {
@@ -16,6 +21,15 @@ export interface Source {
   content_preview: string;
   similarity_score: number | null;
   url: string | null;
+}
+
+export interface RoutingInfo {
+  intent: "general" | "documents" | "web_search" | "hybrid" | "greeting";
+  use_rag: boolean;
+  use_web: boolean;
+  confidence: number;
+  reasoning: string;
+  latency_ms: number;
 }
 
 export interface QueryResponse {
@@ -29,7 +43,58 @@ export interface QueryResponse {
     tokens_output: number;
     vector_results: number;
     web_search_used: boolean;
+    model_used?: string;
+    routing_intent?: string;
+    routing_confidence?: number;
+    routing_latency_ms?: number;
   };
+  thought_process?: string;
+  routing?: RoutingInfo;
+}
+
+// ===== Streaming Types =====
+
+export type StreamEventType = 
+  | "routing"
+  | "search_start"
+  | "search_complete"
+  | "generation_start"
+  | "chunk"
+  | "thought"
+  | "complete"
+  | "error";
+
+export interface StreamEvent {
+  event: StreamEventType;
+  data: Record<string, unknown>;
+}
+
+export interface RoutingEvent {
+  status: "started" | "completed";
+  intent?: string;
+  use_rag?: boolean;
+  use_web?: boolean;
+  confidence?: number;
+}
+
+export interface SearchEvent {
+  type: "rag" | "web";
+  results?: number;
+  found?: boolean;
+}
+
+export interface ChunkEvent {
+  content: string;
+}
+
+export interface ThoughtEvent {
+  content: string;
+}
+
+export interface CompleteEvent {
+  conversation_id: string | null;
+  sources: Source[];
+  metadata: Record<string, unknown>;
 }
 
 // ===== Feedback Types =====
@@ -126,6 +191,17 @@ export interface Message {
   sources?: Source[];
   conversationId?: string;
   isLoading?: boolean;
+  // Nouvelles propriétés
+  thoughtProcess?: string;
+  routingInfo?: RoutingInfo;
+  streamingSteps?: StreamingStep[];
+}
+
+export interface StreamingStep {
+  type: "routing" | "search_rag" | "search_web" | "generating";
+  status: "pending" | "in_progress" | "completed";
+  label: string;
+  details?: string;
 }
 
 export interface ChatSession {
