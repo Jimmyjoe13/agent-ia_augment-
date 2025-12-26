@@ -1,11 +1,12 @@
 /**
  * Page de chat avec l'agent RAG
+ * Utilise le store Zustand pour les préférences
  */
 
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Send, Globe, Loader2, ThumbsUp, ThumbsDown, Bot, User } from "lucide-react";
+import { Send, Globe, Loader2, ThumbsUp, ThumbsDown, Bot, User, StopCircle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -19,6 +20,7 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useChat } from "@/hooks/useChat";
+import { usePreferencesStore } from "@/stores";
 import type { Message, Source } from "@/types/api";
 
 // Composant pour afficher les sources
@@ -152,10 +154,21 @@ function ChatMessage({
 // Page principale
 export default function ChatPage() {
   const [input, setInput] = useState("");
-  const [useWeb, setUseWeb] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const { messages, isLoading, sendMessage, submitFeedback, hasApiKey } = useChat();
+  // Préférences depuis le store Zustand
+  const useWebSearch = usePreferencesStore((state) => state.useWebSearch);
+  const setUseWebSearch = usePreferencesStore((state) => state.setUseWebSearch);
+
+  const { 
+    messages, 
+    isLoading, 
+    sendMessage, 
+    submitFeedback, 
+    hasApiKey,
+    cancelRequest,
+    regenerateLastResponse,
+  } = useChat();
 
   // Scroll to bottom on new messages
   useEffect(() => {
@@ -167,7 +180,7 @@ export default function ChatPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (input.trim() && !isLoading) {
-      sendMessage(input, useWeb);
+      sendMessage(input, useWebSearch);
       setInput("");
     }
   };
@@ -263,13 +276,41 @@ export default function ChatPage() {
             <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-400">
               <input
                 type="checkbox"
-                checked={useWeb}
-                onChange={(e) => setUseWeb(e.target.checked)}
+                checked={useWebSearch}
+                onChange={(e) => setUseWebSearch(e.target.checked)}
                 className="h-4 w-4 rounded border-zinc-700 bg-zinc-800 text-indigo-600"
               />
               <Globe className="h-4 w-4" />
               Recherche web
             </label>
+
+            {/* Bouton Annuler si chargement */}
+            {isLoading && (
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={cancelRequest}
+                className="gap-2 text-red-400 hover:text-red-300"
+              >
+                <StopCircle className="h-4 w-4" />
+                Annuler
+              </Button>
+            )}
+
+            {/* Bouton Régénérer si messages et pas en cours */}
+            {messages.length > 0 && !isLoading && (
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={regenerateLastResponse}
+                className="gap-2 text-zinc-400 hover:text-zinc-300"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Régénérer
+              </Button>
+            )}
           </div>
         </form>
       </div>
