@@ -1,12 +1,13 @@
 /**
  * Hooks personnalisés pour l'ingestion de documents
- * Utilise React Query mutations avec gestion d'erreurs centralisée
+ * Utilise React Query mutations avec gestion d'erreurs améliorée
  */
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import type { IngestResponse } from "@/types/api";
+import { AxiosError } from "axios";
 
 // ===== Types =====
 
@@ -20,10 +21,66 @@ interface GithubIngestionData {
   branch?: string;
 }
 
-interface IngestionResult {
-  success: boolean;
-  message: string;
-  chunks_created?: number;
+interface ApiErrorDetail {
+  error?: string;
+  message?: string;
+  required_scope?: string;
+  your_scopes?: string[];
+}
+
+// ===== Error Handling Helper =====
+
+function getErrorMessage(error: unknown): { title: string; description: string } {
+  if (error instanceof AxiosError && error.response) {
+    const status = error.response.status;
+    const detail = error.response.data?.detail as ApiErrorDetail | string;
+    
+    if (status === 401) {
+      const msg = typeof detail === "object" ? detail?.message : detail;
+      return {
+        title: "Non autorisé",
+        description: msg || "Clé API invalide ou manquante. Configurez votre clé dans Paramètres.",
+      };
+    }
+    
+    if (status === 403) {
+      if (typeof detail === "object" && detail?.error === "insufficient_scope") {
+        return {
+          title: "Permissions insuffisantes",
+          description: `Votre clé n'a pas le scope "${detail.required_scope}". Scopes actuels: ${detail.your_scopes?.join(", ") || "aucun"}.`,
+        };
+      }
+      return {
+        title: "Accès refusé",
+        description: typeof detail === "string" ? detail : "Permissions insuffisantes pour cette action.",
+      };
+    }
+    
+    if (status === 429) {
+      return {
+        title: "Trop de requêtes",
+        description: "Limite de requêtes atteinte. Veuillez patienter.",
+      };
+    }
+    
+    // Autres erreurs
+    return {
+      title: "Erreur serveur",
+      description: typeof detail === "string" ? detail : (detail?.message || `Erreur ${status}`),
+    };
+  }
+  
+  if (error instanceof Error) {
+    return {
+      title: "Erreur",
+      description: error.message,
+    };
+  }
+  
+  return {
+    title: "Erreur",
+    description: "Une erreur inattendue s'est produite.",
+  };
 }
 
 // ===== Text Ingestion =====
@@ -40,7 +97,6 @@ export function useTextIngestion() {
       });
     },
     onMutate: () => {
-      // Afficher un toast de chargement
       return {
         toastId: toast.loading("Ingestion en cours...", {
           description: "Traitement de votre texte",
@@ -53,13 +109,13 @@ export function useTextIngestion() {
         description: data.message || `${variables.title || "Document"} ajouté à la base de connaissances`,
       });
 
-      // Invalider le cache des documents si on en avait un
       queryClient.invalidateQueries({ queryKey: ["documents"] });
     },
     onError: (error, _variables, context) => {
-      toast.error("Échec de l'ingestion", {
+      const { title, description } = getErrorMessage(error);
+      toast.error(title, {
         id: context?.toastId,
-        description: error instanceof Error ? error.message : "Impossible d'ingérer le texte",
+        description,
       });
     },
   });
@@ -91,9 +147,10 @@ export function usePdfIngestion() {
       queryClient.invalidateQueries({ queryKey: ["documents"] });
     },
     onError: (error, _file, context) => {
-      toast.error("Échec de l'upload", {
+      const { title, description } = getErrorMessage(error);
+      toast.error(title, {
         id: context?.toastId,
-        description: error instanceof Error ? error.message : "Impossible de traiter le PDF",
+        description,
       });
     },
   });
@@ -127,11 +184,10 @@ export function useGithubIngestion() {
       queryClient.invalidateQueries({ queryKey: ["documents"] });
     },
     onError: (error, _variables, context) => {
-      toast.error("Échec de l'import GitHub", {
+      const { title, description } = getErrorMessage(error);
+      toast.error(title, {
         id: context?.toastId,
-        description: error instanceof Error 
-          ? error.message 
-          : "Repository introuvable ou accès refusé",
+        description,
       });
     },
   });
