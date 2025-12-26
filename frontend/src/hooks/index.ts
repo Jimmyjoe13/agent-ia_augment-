@@ -4,6 +4,8 @@
 
 // Chat
 export { useChat } from "./useChat";
+export { useStreamingChat } from "./useStreamingChat";
+export { useUnifiedChat } from "./useUnifiedChat";
 
 // API Health
 export { useApiHealth, useApiStatus } from "./useApiHealth";

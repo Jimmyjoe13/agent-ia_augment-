@@ -1,6 +1,6 @@
 /**
  * Page de chat avec l'agent RAG
- * Utilise le store Zustand pour les préférences
+ * Supporte le mode standard et streaming
  */
 
 "use client";
@@ -19,7 +19,8 @@ import {
   ChevronDown,
   Brain,
   FileSearch,
-  Sparkles
+  Sparkles,
+  Zap
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -32,9 +33,14 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { useChat } from "@/hooks/useChat";
+import { useUnifiedChat } from "@/hooks";
 import { usePreferencesStore } from "@/stores";
-import { ThoughtProcess, RoutingBadge } from "@/components/chat/ProcessingSteps";
+import { 
+  ThoughtProcess, 
+  RoutingBadge,
+  ProcessingSteps 
+} from "@/components/chat/ProcessingSteps";
+import { StreamingIndicator } from "@/components/chat/StreamingMessage";
 import type { Message, Source } from "@/types/api";
 
 // Composant pour afficher les sources
@@ -177,19 +183,27 @@ export default function ChatPage() {
   const enableReflection = usePreferencesStore((state) => state.enableReflection);
   const setEnableReflection = usePreferencesStore((state) => state.setEnableReflection);
   const showRoutingInfo = usePreferencesStore((state) => state.showRoutingInfo);
+  const useStreaming = usePreferencesStore((state) => state.useStreaming);
+  const setUseStreaming = usePreferencesStore((state) => state.setUseStreaming);
   
   // État local pour afficher les pensées
   const [expandedThoughts, setExpandedThoughts] = useState<Set<string>>(new Set());
 
+  // Hook unifié (standard ou streaming selon les préférences)
   const { 
     messages, 
-    isLoading, 
+    isLoading,
+    isStreaming,
+    streamingContent,
+    streamingThought,
+    streamingSteps,
+    routingInfo,
     sendMessage, 
     submitFeedback, 
     hasApiKey,
     cancelRequest,
     regenerateLastResponse,
-  } = useChat();
+  } = useUnifiedChat();
 
   // Scroll to bottom function
   const scrollToBottom = () => {
@@ -407,6 +421,35 @@ export default function ChatPage() {
               </Tooltip>
             </TooltipProvider>
 
+            {/* Mode Streaming */}
+            <TooltipProvider delayDuration={300}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <label className={cn(
+                    "flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1 text-sm transition-all",
+                    useStreaming 
+                      ? "bg-amber-500/20 text-amber-400" 
+                      : "text-zinc-400 hover:text-zinc-300"
+                  )}>
+                    <input
+                      type="checkbox"
+                      checked={useStreaming}
+                      onChange={(e) => setUseStreaming(e.target.checked)}
+                      className="sr-only"
+                    />
+                    <Zap className="h-4 w-4" />
+                    <span className="font-medium">Streaming</span>
+                  </label>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-xs">
+                  <p className="font-medium">Mode Streaming</p>
+                  <p className="text-xs text-zinc-400">
+                    Affiche la réponse en temps réel avec les étapes de progression.
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+
             {/* Séparateur */}
             <div className="h-4 w-px bg-zinc-700" />
 
@@ -440,6 +483,12 @@ export default function ChatPage() {
           </div>
         </form>
       </div>
+
+      {/* Indicateur de streaming flottant */}
+      {isStreaming && streamingSteps.length > 0 && (
+        <StreamingIndicator steps={streamingSteps} routingInfo={routingInfo} />
+      )}
     </div>
   );
 }
+
