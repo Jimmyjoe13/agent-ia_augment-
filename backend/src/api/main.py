@@ -31,6 +31,8 @@ from fastapi.openapi.utils import get_openapi
 from src import __version__
 from src.api.routes import router
 from src.api.routes_admin import admin_router
+from src.api.routes_auth import router as auth_router
+from src.api.routes_console import router as console_router
 from src.api.schemas import HealthResponse
 from src.config.logging_config import setup_logging, get_logger
 from src.config.settings import get_settings
@@ -263,6 +265,9 @@ def create_app() -> FastAPI:
     
     # Inclure les routes admin
     app.include_router(admin_router, prefix="/api/v1")
+    
+    # Inclure les routes d'authentification (OAuth, session)
+    app.include_router(auth_router, prefix="/api/v1")
     
     # Route de santé à la racine (non protégée)
     @app.get(

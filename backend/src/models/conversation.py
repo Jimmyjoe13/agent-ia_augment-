@@ -115,6 +115,10 @@ class ConversationCreate(BaseModel):
         default_factory=ConversationMetadata,
         description="Métadonnées de la conversation",
     )
+    user_id: UUID | None = Field(
+        default=None,
+        description="ID de l'utilisateur (multi-tenant)",
+    )
 
 
 class Conversation(ConversationCreate):

@@ -28,6 +28,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/a
 class ApiClient {
   private client: AxiosInstance;
   private apiKey: string | null = null;
+  private accessToken: string | null = null;
 
   constructor() {
     this.client = axios.create({
@@ -35,12 +36,12 @@ class ApiClient {
       headers: {
         "Content-Type": "application/json",
       },
-      timeout: 120000, // 2 minutes pour les requêtes complexes (web search + LLM)
+      timeout: 120000, 
     });
 
-    // Interceptor pour ajouter la clé API et vérifier le rate limiting
+    // Interceptor pour ajouter l'auth
     this.client.interceptors.request.use((config) => {
-      // Vérifier le rate limiting avant chaque requête
+      // 1. Rate Limiting Check
       if (isRateLimited()) {
         const info = getRateLimitInfo();
         const error = new Error(`Rate limited. Retry after ${info.retryAfter} seconds.`);
@@ -48,20 +49,30 @@ class ApiClient {
         return Promise.reject(error);
       }
 
-      const key = this.apiKey || this.getStoredApiKey();
+      // 2. Auth Console (Session Token)
+      // Priorité: Token passé explicitement dans config > Token stocké
+      const token = config.headers["Authorization"] || (this.accessToken ? `Bearer ${this.accessToken}` : null);
+      if (token && typeof token === 'string' && token.startsWith('Bearer ')) {
+        config.headers["Authorization"] = token;
+      }
+
+      // 3. Auth RAG (API Key)
+      // Priorité: Clé passée explicitement > Clé stockée
+      const key = config.headers["X-API-Key"] || this.apiKey;
       if (key) {
         config.headers["X-API-Key"] = key;
       }
+
       return config;
     });
 
-    // Interceptor pour gérer les erreurs
+    // Interceptor Response (inchangé sauf 401 sur token)
     this.client.interceptors.response.use(
       (response) => response,
       (error: AxiosError) => {
         const status = error.response?.status;
 
-        // Gestion du rate limiting (429)
+        // Rate Limit
         if (status === 429) {
           const retryAfter = parseInt(
             error.response?.headers?.["retry-after"] || "60",
@@ -70,44 +81,53 @@ class ApiClient {
           handleRateLimitError(retryAfter);
         }
 
-        // Clé invalide (401)
-        if (status === 401) {
-          this.clearApiKey();
-        }
-
         return Promise.reject(error);
       }
     );
   }
 
-  // ===== API Key Management =====
+  // ===== Auth State Management =====
 
   setApiKey(key: string) {
     this.apiKey = key;
-    if (typeof window !== "undefined") {
-      localStorage.setItem("rag_api_key", key);
-    }
   }
 
-  getStoredApiKey(): string | null {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("rag_api_key");
-    }
-    return null;
+  setAccessToken(token: string) {
+    this.accessToken = token;
   }
 
-  clearApiKey() {
-    this.apiKey = null;
-    if (typeof window !== "undefined") {
-      localStorage.removeItem("rag_api_key");
-    }
+  // ===== Console Endpoints (User) =====
+
+  async getUserProfile(): Promise<any> {
+    const { data } = await this.client.get("/auth/me");
+    return data;
   }
 
-  hasApiKey(): boolean {
-    return !!(this.apiKey || this.getStoredApiKey());
+  async getPlans(): Promise<any[]> {
+    const { data } = await this.client.get("/auth/plans");
+    return data;
   }
 
-  // ===== Query Endpoints =====
+  async getUserApiKeys(): Promise<{ keys: ApiKeyInfo[]; total: number }> {
+    const { data } = await this.client.get("/console/keys");
+    return data;
+  }
+
+  async createUserApiKey(request: ApiKeyCreate): Promise<ApiKeyResponse> {
+    const { data } = await this.client.post("/console/keys", request);
+    return data;
+  }
+
+  async revokeUserApiKey(keyId: string): Promise<void> {
+    await this.client.delete(`/console/keys/${keyId}`);
+  }
+
+  async getUserUsage(): Promise<any> {
+    const { data } = await this.client.get("/console/usage");
+    return data;
+  }
+
+  // ===== Query Endpoints (Legacy & RAG) =====
 
   async query(request: QueryRequest): Promise<QueryResponse> {
     const { data } = await this.client.post<QueryResponse>("/query", request);
@@ -150,28 +170,6 @@ class ApiClient {
       headers: { "Content-Type": "multipart/form-data" },
     });
     return data;
-  }
-
-  // ===== API Keys Endpoints (Admin) =====
-
-  async createApiKey(request: ApiKeyCreate, masterKey: string): Promise<ApiKeyResponse> {
-    const { data } = await this.client.post<ApiKeyResponse>("/keys", request, {
-      headers: { "X-API-Key": masterKey },
-    });
-    return data;
-  }
-
-  async listApiKeys(masterKey: string): Promise<{ keys: ApiKeyInfo[]; total: number }> {
-    const { data } = await this.client.get<{ keys: ApiKeyInfo[]; total: number }>("/keys", {
-      headers: { "X-API-Key": masterKey },
-    });
-    return data;
-  }
-
-  async revokeApiKey(keyId: string, masterKey: string): Promise<void> {
-    await this.client.delete(`/keys/${keyId}`, {
-      headers: { "X-API-Key": masterKey },
-    });
   }
 
   // ===== Health Check =====

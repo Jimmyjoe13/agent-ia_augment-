@@ -63,6 +63,40 @@ class Settings(BaseSettings):
         description="Token d'accès GitHub (optionnel)",
     )
     
+    # ===== OAuth Settings =====
+    google_client_id: str = Field(
+        default="",
+        description="Google OAuth Client ID",
+    )
+    google_client_secret: str = Field(
+        default="",
+        description="Google OAuth Client Secret",
+    )
+    frontend_url: str = Field(
+        default="http://localhost:3000",
+        description="URL du frontend (pour les redirections OAuth)",
+    )
+    
+    # ===== Stripe Settings (Monetization) =====
+    stripe_secret_key: str = Field(
+        default="",
+        description="Clé secrète Stripe",
+    )
+    stripe_publishable_key: str = Field(
+        default="",
+        description="Clé publique Stripe",
+    )
+    stripe_webhook_secret: str = Field(
+        default="",
+        description="Secret pour les webhooks Stripe",
+    )
+    
+    # ===== Redis Settings (Rate Limiting) =====
+    redis_url: str = Field(
+        default="",
+        description="URL Redis pour le rate limiting (ex: redis://localhost:6379)",
+    )
+    
     # ===== Application Settings =====
     app_env: Literal["development", "staging", "production"] = Field(
         default="development",

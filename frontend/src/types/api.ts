@@ -132,3 +132,47 @@ export interface ChatSession {
   messages: Message[];
   createdAt: Date;
 }
+
+// ===== User & Subscription Types =====
+
+export interface UserProfile {
+  id: string;
+  email: string;
+  name: string | null;
+  avatar_url: string | null;
+  role: "user" | "admin" | "superadmin";
+  
+  // Subscription Info
+  plan_slug: string;
+  plan_name: string;
+  subscription_status: string;
+  
+  // Usage
+  requests_used: number;
+  requests_limit: number;
+  documents_used: number;
+  documents_limit: number;
+  api_keys_used: number;
+  api_keys_limit: number;
+}
+
+export interface Plan {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  price_monthly_cents: number;
+  price_yearly_cents: number;
+  requests_per_month: number;
+  features: string[];
+  is_active: boolean;
+}
+
+export interface Subscription {
+  id: string;
+  plan_id: string;
+  status: string;
+  current_period_end: string;
+  plan: Plan;
+}
+

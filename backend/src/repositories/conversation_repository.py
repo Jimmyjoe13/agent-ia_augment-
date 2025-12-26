@@ -65,6 +65,7 @@ class ConversationRepository(BaseRepository[Conversation]):
             "session_id": conv.session_id,
             "user_query": conv.user_query,
             "ai_response": conv.ai_response,
+            "user_id": str(conv.user_id) if conv.user_id else None,
             # mode='json' convertit automatiquement les UUIDs en strings
             "context_sources": [s.model_dump(mode="json") for s in conv.context_sources],
             "metadata": conv.metadata.model_dump(mode="json"),

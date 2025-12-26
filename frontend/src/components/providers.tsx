@@ -1,12 +1,15 @@
 /**
- * Providers pour l'application (React Query, Theme, Notifications)
+ * Providers pour l'application (React Query, Theme, Notifications, Auth)
  */
 
 "use client";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { SessionProvider } from "next-auth/react";
 import { Toaster } from "sonner";
 import { useState } from "react";
+
+import { SyncSession } from "@/components/auth/sync-session";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -22,29 +25,32 @@ export function Providers({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <QueryClientProvider client={queryClient}>
-      {children}
-      <Toaster
-        position="top-right"
-        expand={false}
-        richColors
-        closeButton
-        theme="dark"
-        toastOptions={{
-          style: {
-            background: "hsl(240 10% 10%)",
-            border: "1px solid hsl(240 5% 20%)",
-            color: "hsl(0 0% 95%)",
-          },
-          classNames: {
-            success: "!bg-green-950/90 !border-green-800/50",
-            error: "!bg-red-950/90 !border-red-800/50",
-            warning: "!bg-amber-950/90 !border-amber-800/50",
-            info: "!bg-indigo-950/90 !border-indigo-800/50",
-          },
-        }}
-      />
-    </QueryClientProvider>
+    <SessionProvider>
+      <SyncSession />
+      <QueryClientProvider client={queryClient}>
+        {children}
+        <Toaster
+          position="top-right"
+          expand={false}
+          richColors
+          closeButton
+          theme="dark"
+          toastOptions={{
+            style: {
+              background: "hsl(240 10% 10%)",
+              border: "1px solid hsl(240 5% 20%)",
+              color: "hsl(0 0% 95%)",
+            },
+            classNames: {
+              success: "!bg-green-950/90 !border-green-800/50",
+              error: "!bg-red-950/90 !border-red-800/50",
+              warning: "!bg-amber-950/90 !border-amber-800/50",
+              info: "!bg-indigo-950/90 !border-indigo-800/50",
+            },
+          }}
+        />
+      </QueryClientProvider>
+    </SessionProvider>
   );
 }
 

@@ -83,6 +83,7 @@ class DocumentRepository(BaseRepository[Document]):
         self,
         doc: DocumentCreate,
         embedding: list[float],
+        user_id: str | None = None,
     ) -> Document:
         """
         Crée un document à partir d'un modèle Pydantic.
@@ -90,6 +91,7 @@ class DocumentRepository(BaseRepository[Document]):
         Args:
             doc: Modèle DocumentCreate.
             embedding: Vecteur d'embedding.
+            user_id: ID de l'utilisateur (multi-tenant).
             
         Returns:
             Document créé.
@@ -102,6 +104,10 @@ class DocumentRepository(BaseRepository[Document]):
             "metadata": doc.metadata.model_dump(),
             "content_hash": self._compute_hash(doc.content),
         }
+        
+        if user_id:
+            data["user_id"] = user_id
+            
         return self.create(data)
     
     def search_similar(
@@ -110,6 +116,7 @@ class DocumentRepository(BaseRepository[Document]):
         threshold: float = 0.7,
         limit: int = 10,
         source_type: SourceType | None = None,
+        user_id: str | None = None,
     ) -> list[DocumentMatch]:
         """
         Recherche par similarité cosinus.
@@ -119,6 +126,7 @@ class DocumentRepository(BaseRepository[Document]):
             threshold: Seuil de similarité minimum.
             limit: Nombre maximum de résultats.
             source_type: Filtrer par type de source.
+            user_id: Filtrer par utilisateur (multi-tenant).
             
         Returns:
             Liste des documents correspondants avec score.
@@ -131,6 +139,9 @@ class DocumentRepository(BaseRepository[Document]):
             }
             if source_type:
                 params["filter_source_type"] = source_type.value
+            
+            if user_id:
+                params["filter_user_id"] = user_id
             
             response = self.client.rpc("match_documents", params).execute()
             

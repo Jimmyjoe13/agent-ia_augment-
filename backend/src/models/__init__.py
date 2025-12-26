@@ -15,6 +15,24 @@ from src.models.api_key import (
     ApiKeyValidation,
     ApiKeyUsageStats,
 )
+from src.models.user import (
+    UserRole,
+    OAuthProvider,
+    UserCreate,
+    UserUpdate,
+    UserInfo,
+    UserWithSubscription,
+    SessionInfo,
+)
+from src.models.subscription import (
+    BillingPeriod,
+    SubscriptionStatus,
+    PlanSlug,
+    PlanInfo,
+    SubscriptionInfo,
+    SubscriptionWithPlan,
+    UsageStats,
+)
 
 __all__ = [
     # Document models
@@ -34,4 +52,20 @@ __all__ = [
     "ApiKeyInfo",
     "ApiKeyValidation",
     "ApiKeyUsageStats",
+    # User models
+    "UserRole",
+    "OAuthProvider",
+    "UserCreate",
+    "UserUpdate",
+    "UserInfo",
+    "UserWithSubscription",
+    "SessionInfo",
+    # Subscription models
+    "BillingPeriod",
+    "SubscriptionStatus",
+    "PlanSlug",
+    "PlanInfo",
+    "SubscriptionInfo",
+    "SubscriptionWithPlan",
+    "UsageStats",
 ]

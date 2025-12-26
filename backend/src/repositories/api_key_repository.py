@@ -32,13 +32,14 @@ class ApiKeyRepository(BaseRepository[ApiKeyInfo]):
     
     Gère la création, validation et révocation des clés.
     Les clés sont stockées sous forme de hash SHA-256.
+    Supporté multi-tenant via user_id.
     
     Attributes:
-        KEY_PREFIX: Préfixe des clés générées ("rag_").
+        KEY_PREFIX: Préfixe des clés générées ("sk-proj-").
         KEY_LENGTH: Longueur de la partie aléatoire (32 caractères).
     """
     
-    KEY_PREFIX = "rag_"
+    KEY_PREFIX = "sk-proj-"
     KEY_LENGTH = 32
     
     def __init__(self) -> None:
@@ -113,6 +114,10 @@ class ApiKeyRepository(BaseRepository[ApiKeyInfo]):
             "expires_at": expires_at.isoformat() if expires_at else None,
             "metadata": data.get("metadata", {}),
         }
+        
+        # Ajouter user_id si fourni (multi-tenant)
+        if data.get("user_id"):
+            insert_data["user_id"] = data["user_id"]
         
         response = self.table.insert(insert_data).execute()
         created = response.data[0]
@@ -220,6 +225,7 @@ class ApiKeyRepository(BaseRepository[ApiKeyInfo]):
     
     def list_keys(
         self,
+        user_id: str | None = None,
         page: int = 1,
         per_page: int = 20,
         include_inactive: bool = False,
@@ -228,6 +234,7 @@ class ApiKeyRepository(BaseRepository[ApiKeyInfo]):
         Liste les clés API avec pagination.
         
         Args:
+            user_id: Filtrer par utilisateur (multi-tenant).
             page: Numéro de page (1-indexed).
             per_page: Nombre de résultats par page.
             include_inactive: Inclure les clés révoquées.
@@ -236,6 +243,10 @@ class ApiKeyRepository(BaseRepository[ApiKeyInfo]):
             Tuple (liste des clés, total).
         """
         query = self.table.select("*", count="exact")
+        
+        # Filtre multi-tenant
+        if user_id:
+            query = query.eq("user_id", user_id)
         
         if not include_inactive:
             query = query.eq("is_active", True)

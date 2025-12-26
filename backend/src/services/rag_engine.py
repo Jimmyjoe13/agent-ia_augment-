@@ -119,6 +119,7 @@ class RAGEngine(LoggerMixin):
         question: str,
         system_prompt: str | None = None,
         use_web: bool | None = None,
+        user_id: str | None = None,
     ) -> RAGResponse:
         """
         Traite une requête de manière asynchrone.
@@ -127,6 +128,7 @@ class RAGEngine(LoggerMixin):
             question: Question de l'utilisateur.
             system_prompt: Prompt système personnalisé.
             use_web: Forcer/désactiver la recherche web.
+            user_id: ID utilisateur pour l'isolation contextuelle.
             
         Returns:
             RAGResponse avec la réponse et les sources.
@@ -137,7 +139,7 @@ class RAGEngine(LoggerMixin):
         self.logger.info("Processing query", query_length=len(question))
         
         # 1. Recherche vectorielle
-        vector_context, vector_sources = await self._search_vector_store(question)
+        vector_context, vector_sources = await self._search_vector_store(question, user_id)
         sources.extend(vector_sources)
         
         # 2. Recherche web (si activée)
@@ -174,6 +176,7 @@ class RAGEngine(LoggerMixin):
                 sources,
                 tokens,
                 elapsed_ms,
+                user_id,
             )
         
         self.logger.info(
@@ -228,6 +231,7 @@ class RAGEngine(LoggerMixin):
     async def _search_vector_store(
         self,
         query: str,
+        user_id: str | None = None,
     ) -> tuple[str, list[ContextSource]]:
         """Recherche dans le Vector Store."""
         try:
@@ -239,6 +243,7 @@ class RAGEngine(LoggerMixin):
                 query_embedding,
                 threshold=self.config.vector_threshold,
                 limit=self.config.vector_max_results,
+                user_id=user_id,
             )
             
             if not matches:
@@ -370,6 +375,7 @@ Réponds dans la langue de la question. Tutoie si l'utilisateur tutoie, vouvoie 
         sources: list[ContextSource],
         tokens: dict[str, int],
         elapsed_ms: int,
+        user_id: str | None = None,
     ) -> str | None:
         """Enregistre la conversation."""
         try:
@@ -378,6 +384,7 @@ Réponds dans la langue de la question. Tutoie si l'utilisateur tutoie, vouvoie 
                 user_query=question,
                 ai_response=answer,
                 context_sources=sources,
+                user_id=user_id,
                 metadata=ConversationMetadata(
                     model_used=self.config.llm_model,
                     tokens_input=tokens.get("input", 0),

@@ -115,6 +115,7 @@ async def query_rag(
             question=request.question,
             system_prompt=request.system_prompt,
             use_web=request.use_web_search,
+            user_id=str(api_key.user_id) if api_key.user_id else None,
         )
         
         # Convertir les sources
@@ -258,6 +259,7 @@ async def ingest_github(
             provider,
             request.repositories,
             skip_duplicates=request.skip_duplicates,
+            user_id=str(api_key.user_id) if api_key.user_id else None,
         )
         
         logger.info(
@@ -265,7 +267,7 @@ async def ingest_github(
             key_id=str(api_key.id),
             repos=len(request.repositories),
             created=stats.total_created,
-        )
+        
         
         return IngestResponse(
             success=True,
@@ -305,7 +307,10 @@ async def ingest_text(
             ),
         )
         
-        stats = vectorization.ingest_documents([doc])
+        stats = vectorization.ingest_documents(
+            [doc],
+            user_id=str(api_key.user_id) if api_key.user_id else None,
+        )
         
         return IngestResponse(
             success=stats.total_created > 0,
@@ -352,7 +357,10 @@ async def ingest_pdf(
         
         vectorization = get_vectorization()
         doc_creates = [provider.to_document(d) for d in documents]
-        stats = vectorization.ingest_documents(doc_creates)
+        stats = vectorization.ingest_documents(
+            doc_creates,
+            user_id=str(api_key.user_id) if api_key.user_id else None,
+        )
         
         return IngestResponse(
             success=stats.total_created > 0,

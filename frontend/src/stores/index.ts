@@ -21,10 +21,12 @@ export {
   useCreateSession,
 } from "./chatStore";
 
-// Auth
+// Playground (API Key)
 export {
-  useAuthStore,
-  useApiKey,
+  usePlaygroundStore,
+  useActiveApiKey as useApiKey,
+  useActiveApiKey,
+  useActiveKeyName,
   useIsAuthenticated,
-  useAuthActions,
-} from "./authStore";
+  usePlaygroundActions,
+} from "./playgroundStore";

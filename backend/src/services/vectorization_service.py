@@ -43,6 +43,7 @@ class VectorizationService(LoggerMixin):
         provider: BaseProvider,
         sources: list[str],
         skip_duplicates: bool = True,
+        user_id: str | None = None,
     ) -> IngestionStats:
         """
         Ingère des documents depuis un provider.
@@ -77,7 +78,7 @@ class VectorizationService(LoggerMixin):
                 embedding = self._embedding_service.embed_text(doc.content)
                 
                 # Stocker dans Supabase
-                self._document_repo.create_from_model(doc, embedding)
+                self._document_repo.create_from_model(doc, embedding, user_id=user_id)
                 stats.total_created += 1
                 
             except Exception as e:
@@ -99,6 +100,7 @@ class VectorizationService(LoggerMixin):
         self,
         documents: list[DocumentCreate],
         skip_duplicates: bool = True,
+        user_id: str | None = None,
     ) -> IngestionStats:
         """
         Ingère une liste de documents.
@@ -121,7 +123,7 @@ class VectorizationService(LoggerMixin):
                     continue
                 
                 embedding = self._embedding_service.embed_text(doc.content)
-                self._document_repo.create_from_model(doc, embedding)
+                self._document_repo.create_from_model(doc, embedding, user_id=user_id)
                 stats.total_created += 1
                 
             except Exception as e:
@@ -136,6 +138,7 @@ class VectorizationService(LoggerMixin):
         source_type: str,
         source_id: str,
         metadata: dict | None = None,
+        user_id: str | None = None,
     ) -> Document | None:
         """
         Ingère un document unique.
@@ -166,6 +169,8 @@ class VectorizationService(LoggerMixin):
                 "source_id": source_id,
                 "metadata": metadata or {},
             }
+            if user_id:
+                data["user_id"] = user_id
             
             return self._document_repo.create(data)
             
