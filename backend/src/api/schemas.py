@@ -167,3 +167,13 @@ class HealthResponse(BaseModel):
     status: str
     version: str
     services: dict[str, bool]
+
+
+# ===== Error Schemas =====
+
+class ErrorResponse(BaseModel):
+    """Réponse d'erreur standardisée."""
+    
+    error: str = Field(..., description="Code d'erreur (ex: INVALID_REQUEST)")
+    message: str = Field(..., description="Message d'erreur descriptif")
+    details: dict[str, Any] | None = Field(default=None, description="Détails supplémentaires")

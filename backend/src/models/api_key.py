@@ -166,6 +166,22 @@ class ApiKeyInfo(BaseModel):
     is_active: bool = Field(..., description="Clé active")
     expires_at: datetime | None = Field(default=None)
     last_used_at: datetime | None = Field(default=None)
+    model_config = {"from_attributes": True}
+
+
+class ApiKeyValidation(BaseModel):
+    """
+    Résultat de la validation d'une clé API.
+    Contient l'ID de la clé et ses permissions si valide.
+    """
+    
+    is_valid: bool = Field(..., description="La clé est-elle valide")
+    id: UUID | None = Field(default=None, description="ID de la clé")
+    user_id: UUID | None = Field(default=None, description="ID de l'utilisateur")
+    scopes: list[str] = Field(default_factory=list, description="Permissions accordées")
+    rate_limit: int = Field(default=100, description="Limite de requêtes par minute")
+    error_message: str | None = Field(
+        default=None,
         description="Raison du rejet si invalide",
     )
 

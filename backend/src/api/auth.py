@@ -34,6 +34,7 @@ from src.config.logging_config import get_logger
 from src.config.settings import get_settings
 from src.models.api_key import ApiKeyScope, ApiKeyValidation
 from src.repositories.api_key_repository import ApiKeyRepository
+from src.services.rate_limiter import get_rate_limiter
 
 logger = get_logger(__name__)
 
@@ -155,15 +156,43 @@ async def get_api_key(
             },
         )
     
-    # Stocker les infos dans request.state pour logging
+    # ===== 3. Rate Limiting =====
+    rate_limiter = get_rate_limiter()
+    
+    # On limite par ID de clé si présent, sinon par IP (fallback/public)
+    limit_id = f"key:{validation.id}" if validation else f"ip:{client_ip}"
+    limit_value = validation.rate_limit if validation else settings.rate_limit_requests
+    
+    allowed, count, retry_after = await rate_limiter.is_allowed(
+        key=limit_id,
+        limit=limit_value
+    )
+    
+    if not allowed:
+        raise HTTPException(
+            status_code=429,
+            detail={
+                "error": "rate_limit_exceeded",
+                "message": f"Limite de requêtes dépassée. Réessayez dans {retry_after} secondes.",
+                "retry_after": retry_after
+            },
+            headers={"Retry-After": str(retry_after)}
+        )
+    
+    # Stocker les infos dans request.state pour logging et middleware
     request.state.api_key = validation
     request.state.request_start_time = time.time()
+    request.state.rate_limit_count = count
+    request.state.rate_limit_max = limit_value
+    request.state.rate_limit_retry_after = retry_after
     
-    logger.debug(
-        "API key validated",
-        key_id=str(validation.id),
-        scopes=validation.scopes,
-    )
+    if validation:
+        logger.debug(
+            "API key validated",
+            key_id=str(validation.id),
+            scopes=validation.scopes,
+            rate_count=count
+        )
     
     return validation
 

@@ -24,18 +24,22 @@ Example:
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, status, HTTPException
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
+from fastapi.responses import JSONResponse
 
 from src import __version__
 from src.api.routes import router
 from src.api.routes_admin import admin_router
 from src.api.routes_auth import router as auth_router
 from src.api.routes_console import router as console_router
-from src.api.schemas import HealthResponse
+from src.api.schemas import HealthResponse, ErrorResponse, SourceResponse
+from src.api.middleware import RateLimitMiddleware, RequestLoggingMiddleware
 from src.config.logging_config import setup_logging, get_logger
 from src.config.settings import get_settings
+from src.config.redis import close_redis, get_redis_client
 
 
 @asynccontextmanager
@@ -46,10 +50,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger = get_logger("api")
     logger.info("API starting", version=__version__)
     
+    # Préchauffer Redis (optionnel)
+    await get_redis_client()
+    
     yield
     
     # Shutdown
     logger.info("API shutting down")
+    await close_redis()
 
 
 def custom_openapi(app: FastAPI) -> dict:
@@ -220,6 +228,41 @@ def create_app() -> FastAPI:
     # Schéma OpenAPI personnalisé
     app.openapi = lambda: custom_openapi(app)
     
+    # ===== Error Handlers =====
+    
+    @app.exception_handler(HTTPException)
+    async def http_exception_handler(request: Request, exc: HTTPException):
+        """Handler pour les erreurs HTTP levées explicitement."""
+        content = {
+            "error": "error",
+            "message": str(exc.detail),
+        }
+        
+        # Si detail est un dict, on extrait les infos
+        if isinstance(exc.detail, dict):
+            content["error"] = exc.detail.get("error", "error")
+            content["message"] = exc.detail.get("message", str(exc.detail))
+            if "details" in exc.detail:
+                content["details"] = exc.detail["details"]
+                
+        return JSONResponse(
+            status_code=exc.status_code,
+            content=content,
+            headers=exc.headers
+        )
+
+    @app.exception_handler(RequestValidationError)
+    async def validation_exception_handler(request: Request, exc: RequestValidationError):
+        """Handler pour les erreurs de validation Pydantic."""
+        return JSONResponse(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            content={
+                "error": "INVALID_REQUEST",
+                "message": "Erreur de validation des paramètres.",
+                "details": {"errors": exc.errors()}
+            },
+        )
+    
     # CORS Middleware - Configurable origins
     # Note: En production, configurez CORS_ORIGINS avec l'URL du frontend
     cors_origins_str = settings.cors_origins or ""
@@ -257,8 +300,12 @@ def create_app() -> FastAPI:
         allow_credentials=True,
         allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
         allow_headers=["*"],
-        expose_headers=["X-RateLimit-Limit", "X-RateLimit-Remaining", "X-RateLimit-Reset"],
+        expose_headers=["X-RateLimit-Limit", "X-RateLimit-Remaining", "X-RateLimit-Reset", "X-Response-Time"],
     )
+    
+    # Gateway Middlewares
+    app.add_middleware(RateLimitMiddleware)
+    app.add_middleware(RequestLoggingMiddleware)
     
     # Inclure les routes principales
     app.include_router(router, prefix="/api/v1")
@@ -268,6 +315,9 @@ def create_app() -> FastAPI:
     
     # Inclure les routes d'authentification (OAuth, session)
     app.include_router(auth_router, prefix="/api/v1")
+
+    # Inclure les routes de la console (self-service)
+    app.include_router(console_router, prefix="/api/v1")
     
     # Route de santé à la racine (non protégée)
     @app.get(
@@ -279,12 +329,22 @@ def create_app() -> FastAPI:
     )
     async def health_check() -> HealthResponse:
         """Vérifie l'état de santé de l'API."""
+        redis_client = await get_redis_client()
+        redis_status = False
+        if redis_client:
+            try:
+                await redis_client.ping()
+                redis_status = True
+            except Exception:
+                redis_status = False
+
         services = {
             "api": True,
             "mistral": bool(settings.mistral_api_key),
             "supabase": bool(settings.supabase_url),
             "perplexity": bool(settings.perplexity_api_key),
             "github": bool(settings.github_access_token),
+            "redis": redis_status,
             "auth_enabled": settings.api_key_required,
         }
         
