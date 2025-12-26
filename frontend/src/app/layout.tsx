@@ -2,8 +2,6 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers";
-import { Sidebar } from "@/components/sidebar";
-import { SectionErrorBoundary } from "@/components/ui/error-boundary";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -27,24 +25,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr" className="dark">
+    <html lang="fr" className="dark" style={{ colorScheme: "dark" }}>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-zinc-950 text-zinc-100`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-zinc-950 text-zinc-100 min-h-screen`}
       >
         <Providers>
-          <div className="flex h-screen">
-            {/* Sidebar */}
-            <SectionErrorBoundary name="Sidebar">
-              <Sidebar />
-            </SectionErrorBoundary>
-            
-            {/* Main Content */}
-            <main className="flex-1 overflow-hidden">
-              <SectionErrorBoundary name="Content">
-                {children}
-              </SectionErrorBoundary>
-            </main>
-          </div>
+          {children}
         </Providers>
       </body>
     </html>

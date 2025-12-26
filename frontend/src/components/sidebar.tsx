@@ -15,6 +15,8 @@ import {
   Settings,
   Bot,
   Plus,
+  Terminal,
+  BookOpen,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -33,6 +35,12 @@ const navItems = [
     description: "Discuter avec l'agent",
   },
   {
+    title: "Playground",
+    href: "/playground",
+    icon: Terminal,
+    description: "Tester l'API en direct",
+  },
+  {
     title: "Dashboard",
     href: "/dashboard",
     icon: BarChart3,
@@ -49,6 +57,12 @@ const navItems = [
     href: "/keys",
     icon: Key,
     description: "Gérer les clés API",
+  },
+  {
+    title: "Docs",
+    href: "/docs",
+    icon: BookOpen,
+    description: "Documentation API",
   },
   {
     title: "Paramètres",
@@ -92,7 +106,7 @@ export function Sidebar() {
       <Separator className="my-4 w-8 bg-white/10" />
 
       {/* Navigation */}
-      <nav className="flex flex-1 flex-col items-center gap-2">
+      <nav className="flex flex-1 flex-col items-center gap-2 overflow-y-auto w-full no-scrollbar">
         <TooltipProvider delayDuration={0}>
           {navItems.map((item) => {
             const isActive = pathname === item.href;

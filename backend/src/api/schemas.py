@@ -34,6 +34,18 @@ class QueryRequest(BaseModel):
         default=None,
         description="ID de session existante",
     )
+    temperature: float | None = Field(
+        default=None,
+        description="Température de génération (0.0 à 2.0)",
+        ge=0.0,
+        le=2.0,
+    )
+    max_tokens: int | None = Field(
+        default=None,
+        description="Nombre maximum de tokens à générer",
+        ge=1,
+        le=8192,
+    )
 
 
 class SourceResponse(BaseModel):
